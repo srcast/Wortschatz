@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#EDF0F4" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0F131A" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Wortschatz">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="style.css">
+  <title>Wortschatz</title>
+</head>
+<body>
+  <main class="app">
+    <header class="top">
+      <h1 class="brand">Wortschatz</h1>
+      <button id="dirBtn" class="dir" type="button" aria-label="Trocar a língua das palavras">
+        <span id="dirFrom">DE</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h11l-3-3M17 17H6l3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span id="dirTo">PT</span>
+      </button>
+    </header>
+
+    <div class="levels" id="levels" role="radiogroup" aria-label="Nível">
+      <span class="levels-thumb" aria-hidden="true"></span>
+      <button type="button" role="radio" data-level="A1">A1</button>
+      <button type="button" role="radio" data-level="A2">A2</button>
+      <button type="button" role="radio" data-level="B1">B1</button>
+      <button type="button" role="radio" data-level="B2">B2</button>
+    </div>
+
+    <div class="filters" id="filters" role="radiogroup" aria-label="Tipo de palavra">
+      <button type="button" role="radio" data-type="all">Tudo</button>
+      <button type="button" role="radio" data-type="substantivo">Substantivos</button>
+      <button type="button" role="radio" data-type="verbo">Verbos</button>
+      <button type="button" role="radio" data-type="adjetivo">Adjetivos</button>
+      <button type="button" role="radio" data-type="advérbio">Advérbios</button>
+      <button type="button" role="radio" data-type="preposição">Preposições</button>
+      <button type="button" role="radio" data-type="conector">Conectores</button>
+    </div>
+
+    <section class="card" id="card" aria-live="polite">
+      <div class="card-meta">
+        <span id="type" class="type"></span>
+        <span id="remaining" class="remaining"></span>
+      </div>
+
+      <div class="card-body" id="cardBody">
+        <p id="word" class="word"></p>
+        <div class="answer" id="answer">
+          <span class="rule" aria-hidden="true"></span>
+          <div class="stack">
+            <p id="translation" class="translation"></p>
+            <p class="hint" id="hint">Toca para ver a tradução</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="done" id="done" hidden>
+        <p class="done-title" id="doneTitle">Nível concluído</p>
+        <p class="done-text" id="doneText"></p>
+        <button type="button" class="btn primary" id="restartBtn">Recomeçar o nível</button>
+      </div>
+    </section>
+
+    <div class="actions" id="actions">
+      <button type="button" class="btn primary" id="revealBtn">Mostrar tradução</button>
+      <div class="row">
+        <button type="button" class="btn known" id="knownBtn">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Já sei
+        </button>
+        <button type="button" class="btn secondary" id="nextBtn">Nova palavra</button>
+      </div>
+    </div>
+
+    <footer class="foot">
+      <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+      <div class="foot-row">
+        <span id="knownCount" class="known-count"></span>
+        <button type="button" class="clear" id="clearBtn">Limpar</button>
+      </div>
+    </footer>
+  </main>
+
+  <dialog id="confirm" class="sheet">
+    <form method="dialog">
+      <p class="sheet-title" id="confirmTitle">Limpar palavras sabidas?</p>
+      <p class="sheet-text" id="confirmText"></p>
+      <div class="sheet-actions">
+        <button type="submit" class="btn secondary" value="cancel">Cancelar</button>
+        <button type="submit" class="btn danger" value="ok">Limpar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
