@@ -14,6 +14,10 @@
   --die: #C2416F;
   --das: #A86A0E;
   --shadow: 0 1px 2px rgba(23, 32, 51, .06), 0 12px 32px -12px rgba(23, 32, 51, .18);
+  --lv-a1: #1F8A6B; --lv-a1-soft: #DCF1E9;
+  --lv-a2: #2770B8; --lv-a2-soft: #DDEAF8;
+  --lv-b1: #B3690A; --lv-b1-soft: #FBEBD3;
+  --lv-b2: #7D45C7; --lv-b2-soft: #ECE2FA;
   --radius-card: 30px;
   --radius-btn: 18px;
   --serif: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
@@ -38,6 +42,10 @@
     --die: #F092B6;
     --das: #E8B45E;
     --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 16px 40px -16px rgba(0, 0, 0, .6);
+    --lv-a1: #5CC9A3; --lv-a1-soft: #173329;
+    --lv-a2: #7DB5F2; --lv-a2-soft: #172A40;
+    --lv-b1: #E8B45E; --lv-b1-soft: #362812;
+    --lv-b2: #BE98F5; --lv-b2-soft: #2A1E40;
   }
 }
 
@@ -92,6 +100,105 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
   font-size: 15px; font-weight: 600;
 }
 .dir svg { width: 18px; height: 18px; color: var(--muted); transition: transform .35s ease; }
+.top-actions { display: flex; align-items: center; gap: 8px; }
+.icon-btn {
+  display: inline-grid; place-items: center;
+  width: 38px; height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+}
+.icon-btn svg { width: 20px; height: 20px; }
+
+/* Lista de palavras sabidas */
+.list-view { gap: 0; padding-bottom: calc(env(safe-area-inset-bottom) + 24px); }
+.list-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: calc(-14px - env(safe-area-inset-top)) -20px 0;
+  padding: calc(env(safe-area-inset-top) + 14px) 20px 10px;
+  background: var(--bg);
+}
+.back {
+  display: inline-flex; align-items: center; gap: 2px;
+  height: 38px; margin-left: -8px; padding: 0 10px 0 4px;
+  border: 0; background: none;
+  font-size: 17px; font-weight: 600; color: var(--accent);
+}
+.back svg { width: 22px; height: 22px; }
+.list-title {
+  margin: 8px 0 14px;
+  font-family: var(--serif);
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.search {
+  display: flex; align-items: center; gap: 10px;
+  height: 48px; padding: 0 14px;
+  border-radius: 16px;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+.search svg { flex: none; width: 20px; height: 20px; }
+.search input {
+  flex: 1; min-width: 0;
+  border: 0; outline: 0; background: none;
+  font: inherit; font-size: 17px; color: var(--ink);
+  -webkit-appearance: none; appearance: none;
+}
+.search input::placeholder { color: var(--muted); }
+.search:focus-within { box-shadow: 0 0 0 2px var(--accent); }
+.list-count { margin: 12px 4px 0; font-size: 14px; color: var(--muted); }
+
+.list {
+  margin: 4px 0 0; padding: 0; list-style: none;
+  border-radius: 22px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.list:empty { display: none; }
+.item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--line);
+}
+.item:first-child { border-top: 0; }
+.item-text { flex: 1; min-width: 0; }
+.item-de {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 20px; font-weight: 600; line-height: 1.25;
+  overflow-wrap: anywhere;
+  user-select: text; -webkit-user-select: text;
+}
+.item-de .case { font-size: .6em; }
+.item-pt {
+  margin: 3px 0 0;
+  font-size: 15px; line-height: 1.35;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+  user-select: text; -webkit-user-select: text;
+}
+.item-pt mark, .item-de mark { background: none; color: var(--accent); font-weight: 700; }
+.lvl {
+  flex: none;
+  min-width: 42px;
+  padding: 5px 0;
+  border-radius: 10px;
+  text-align: center;
+  font-size: 13px; font-weight: 700;
+}
+.lvl-A1 { color: var(--lv-a1); background: var(--lv-a1-soft); }
+.lvl-A2 { color: var(--lv-a2); background: var(--lv-a2-soft); }
+.lvl-B1 { color: var(--lv-b1); background: var(--lv-b1-soft); }
+.lvl-B2 { color: var(--lv-b2); background: var(--lv-b2-soft); }
+.list-empty {
+  margin: 40px auto 0; max-width: 28ch;
+  text-align: center; font-size: 16px; line-height: 1.5; color: var(--muted);
+}
 .dir.flip svg { transform: rotate(180deg); }
 
 /* Levels */

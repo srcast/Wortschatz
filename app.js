@@ -41,21 +41,66 @@
     };
   }
 
+  function normalize(s) {
+    if (!s || !LEVELS.includes(s.level)) return null;
+    const d = defaultState();
+    const merged = { ...d, ...s, known: { ...d.known, ...(s.known || {}) } };
+    if (!TYPES.includes(merged.filter)) merged.filter = 'all';
+    return merged;
+  }
+
   function load() {
     try {
-      const s = JSON.parse(localStorage.getItem(STORE_KEY));
-      if (s && LEVELS.includes(s.level)) {
-        const d = defaultState();
-        const merged = { ...d, ...s, known: { ...d.known, ...(s.known || {}) } };
-        if (!TYPES.includes(merged.filter)) merged.filter = 'all';
-        return merged;
-      }
+      return normalize(JSON.parse(localStorage.getItem(STORE_KEY))) || defaultState();
     } catch (e) { /* armazenamento indisponível */ }
     return defaultState();
   }
 
+  // ---------- Base de dados no iPhone (IndexedDB) ----------
+  // O localStorage do iOS pode perder a última gravação se a app for fechada logo a seguir.
+  // Por isso o estado é guardado também no IndexedDB, que grava de forma garantida.
+  let dbPromise = null;
+  function db() {
+    if (!dbPromise) {
+      dbPromise = new Promise((resolve) => {
+        try {
+          const req = indexedDB.open('wortschatz', 1);
+          req.onupgradeneeded = () => req.result.createObjectStore('kv');
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => resolve(null);
+          req.onblocked = () => resolve(null);
+        } catch (e) { resolve(null); }
+      });
+    }
+    return dbPromise;
+  }
+
+  async function idbGet() {
+    const d = await db();
+    if (!d) return null;
+    return new Promise((resolve) => {
+      try {
+        const r = d.transaction('kv', 'readonly').objectStore('kv').get(STORE_KEY);
+        r.onsuccess = () => resolve(r.result || null);
+        r.onerror = () => resolve(null);
+      } catch (e) { resolve(null); }
+    });
+  }
+
+  async function idbPut(value) {
+    const d = await db();
+    if (!d) return;
+    try {
+      const tx = d.transaction('kv', 'readwrite', { durability: 'strict' });
+      tx.objectStore('kv').put(value, STORE_KEY);
+    } catch (e) { /* ignorar */ }
+  }
+
   function save() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* ignorar */ }
+    state.savedAt = Date.now();
+    const copy = JSON.parse(JSON.stringify(state));
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(copy)); } catch (e) { /* ignorar */ }
+    idbPut(copy);
   }
 
   let state = load();
@@ -97,6 +142,12 @@
     newCycle();
     next();
   }
+
+  // grava sempre que a app vai para segundo plano ou é fechada
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') save();
+  });
+  window.addEventListener('pagehide', save);
 
   function setFilter(type) {
     if (type === state.filter) return;
@@ -323,6 +374,13 @@
       byId[w.id] = w;
     }
 
+    // usa a cópia mais recente entre localStorage e IndexedDB
+    const fromDb = normalize(await idbGet());
+    if (fromDb && (fromDb.savedAt || 0) > (state.savedAt || 0)) state = fromDb;
+
+    // pede ao iPhone para não apagar os dados da app
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* ignorar */ }
+
     // remove marcações de palavras que já não existem na lista
     for (const l of LEVELS) state.known[l] = (state.known[l] || []).filter((id) => byId[id]);
 
@@ -331,12 +389,86 @@
       newCycle();
       next();
     } else {
-      state.queue = state.queue.filter((id) => byId[id]);
-      if (!state.current && state.queue.length) next();
+      // limpa a ronda guardada de palavras inexistentes, de outro tipo ou já sabidas
+      const k = knownSet();
+      state.queue = state.queue.filter((id) => byId[id] && inFilter(byId[id]) && !k.has(id));
+      if (!state.current || k.has(state.current)) next();
       else render(false);
     }
+    save();
     scrollActiveFilter();
   }
+
+  // ---------- Página «Palavras que já sei» ----------
+  const listEl = {
+    practice: $('practiceView'), list: $('listView'),
+    listBtn: $('listBtn'), backBtn: $('backBtn'),
+    search: $('searchInput'), count: $('listCount'),
+    items: $('knownList'), empty: $('listEmpty'),
+  };
+
+  // minúsculas, sem acentos e com ß = ss, para pesquisar em qualquer língua
+  const fold = (s) => s.toLowerCase().replace(/ß/g, 'ss').normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const sortKey = (w) => fold(w.de.replace(/^(der|die|das|sich)\s+/, '').replace(/\s*\(Pl\.\)\s*$/, ''));
+
+  function knownWords() {
+    const out = [];
+    for (const l of LEVELS) for (const id of state.known[l] || []) if (byId[id]) out.push(byId[id]);
+    return out.sort((a, b) => sortKey(a).localeCompare(sortKey(b), 'de'));
+  }
+
+  function renderList() {
+    const all = knownWords();
+    const q = fold(listEl.search.value.trim());
+    const words = q
+      ? all.filter((w) => {
+          if (!w.search) w.search = fold(`${w.de} ${w.pt}`);
+          return w.search.includes(q);
+        })
+      : all;
+
+    listEl.items.innerHTML = words.map((w) => {
+      const de = formatGerman(w).html;
+      const pt = esc(w.pt.split(';').map((p) => p.trim()).join(', '));
+      return `<li class="item"><div class="item-text"><p class="item-de" lang="de">${de}</p>` +
+        `<p class="item-pt" lang="pt-PT">${pt}</p></div><span class="lvl lvl-${w.nivel}">${w.nivel}</span></li>`;
+    }).join('');
+
+    if (!all.length) {
+      listEl.count.textContent = '';
+      listEl.empty.textContent = 'Ainda não marcaste nenhuma palavra como «Já sei». As que marcares aparecem aqui.';
+      listEl.empty.hidden = false;
+    } else if (!words.length) {
+      listEl.count.textContent = '';
+      listEl.empty.textContent = `Nenhuma palavra sabida corresponde a «${listEl.search.value.trim()}».`;
+      listEl.empty.hidden = false;
+    } else {
+      listEl.count.textContent = q
+        ? `${words.length} de ${all.length} ${all.length === 1 ? 'palavra' : 'palavras'}`
+        : `${all.length} ${all.length === 1 ? 'palavra sabida' : 'palavras sabidas'} em todos os níveis`;
+      listEl.empty.hidden = true;
+    }
+  }
+
+  function openList() {
+    listEl.search.value = '';
+    renderList();
+    listEl.practice.hidden = true;
+    listEl.list.hidden = false;
+    window.scrollTo(0, 0);
+  }
+
+  function closeList() {
+    listEl.search.blur();
+    listEl.list.hidden = true;
+    listEl.practice.hidden = false;
+    window.scrollTo(0, 0);
+  }
+
+  listEl.listBtn.addEventListener('click', openList);
+  listEl.backBtn.addEventListener('click', closeList);
+  listEl.search.addEventListener('input', renderList);
+  listEl.search.addEventListener('keydown', (e) => { if (e.key === 'Enter') listEl.search.blur(); });
 
   init();
 

@@ -1,6 +1,6 @@
 // Guarda a app no iPhone para funcionar sem internet.
-// Ao alterar ficheiros (ex.: words.json), muda a versão para forçar a atualização.
-const CACHE = 'wortschatz-v1';
+// Com internet, vai sempre buscar a versão mais recente; sem internet, usa a cópia guardada.
+const CACHE = 'wortschatz-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -14,7 +14,11 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE)
+      .then((c) => c.addAll(ASSETS.map((u) => new Request(u, { cache: 'reload' }))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (e) => {
@@ -25,17 +29,23 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Responde logo com a cópia guardada e atualiza-a em segundo plano.
+// Rede primeiro (sem cache HTTP), cópia guardada se não houver internet.
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
   e.respondWith(
-    caches.open(CACHE).then(async (cache) => {
-      const cached = await cache.match(req, { ignoreSearch: true });
-      const network = fetch(req)
-        .then((res) => { if (res.ok) cache.put(req, res.clone()); return res; })
-        .catch(() => cached || (req.mode === 'navigate' ? cache.match('./index.html') : undefined));
-      return cached || network;
-    })
+    fetch(req, { cache: 'no-cache' })
+      .then((res) => {
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy));
+        }
+        return res;
+      })
+      .catch(async () => {
+        const cache = await caches.open(CACHE);
+        return (await cache.match(req, { ignoreSearch: true })) ||
+          (req.mode === 'navigate' ? cache.match('./index.html') : undefined);
+      })
   );
 });

@@ -17,14 +17,19 @@
   <title>Wortschatz</title>
 </head>
 <body>
-  <main class="app">
+  <main class="app" id="practiceView">
     <header class="top">
       <h1 class="brand">Wortschatz</h1>
-      <button id="dirBtn" class="dir" type="button" aria-label="Trocar a língua das palavras">
-        <span id="dirFrom">DE</span>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h11l-3-3M17 17H6l3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span id="dirTo">PT</span>
-      </button>
+      <div class="top-actions">
+        <button id="listBtn" class="icon-btn" type="button" aria-label="Ver palavras sabidas">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7l1.6 1.6L8.5 5.6M4 15l1.6 1.6 2.9-3M11.5 7.5H20M11.5 15.5H20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button id="dirBtn" class="dir" type="button" aria-label="Trocar a língua das palavras">
+          <span id="dirFrom">DE</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h11l-3-3M17 17H6l3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span id="dirTo">PT</span>
+        </button>
+      </div>
     </header>
 
     <div class="levels" id="levels" role="radiogroup" aria-label="Nível">
@@ -87,6 +92,25 @@
         <button type="button" class="clear" id="clearBtn">Limpar</button>
       </div>
     </footer>
+  </main>
+
+  <main class="app list-view" id="listView" hidden>
+    <header class="list-head">
+      <div class="top">
+        <button id="backBtn" class="back" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Praticar
+        </button>
+      </div>
+      <h2 class="list-title">Palavras que já sei</h2>
+      <label class="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <input id="searchInput" type="search" placeholder="Procurar em alemão ou português" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="search" aria-label="Procurar palavra sabida">
+      </label>
+      <p class="list-count" id="listCount"></p>
+    </header>
+    <ul class="list" id="knownList"></ul>
+    <p class="list-empty" id="listEmpty" hidden></p>
   </main>
 
   <dialog id="confirm" class="sheet">
