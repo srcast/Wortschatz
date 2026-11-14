@@ -1,6 +1,6 @@
 // Guarda a app no iPhone para funcionar sem internet.
 // Com internet, vai sempre buscar a versão mais recente; sem internet, usa a cópia guardada.
-const CACHE = 'wortschatz-v3';
+const CACHE = 'wortschatz-v4';
 const ASSETS = [
   './',
   './index.html',

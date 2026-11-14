@@ -264,7 +264,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 300px;
+  min-height: min(300px, 36dvh);
   padding: 22px 24px 26px;
   border-radius: var(--radius-card);
   background: var(--surface);
@@ -440,8 +440,39 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
-@media (max-height: 640px) {
-  .app { gap: 12px; }
-  .card { min-height: 240px; }
-  .btn { height: 50px; }
+/* Ecrãs mais baixos (telemóveis pequenos ou com barras do browser): tudo mais compacto */
+@media (max-height: 760px) {
+  #practiceView { gap: 12px; padding-top: calc(env(safe-area-inset-top) + 10px); padding-bottom: calc(env(safe-area-inset-bottom) + 10px); }
+  .brand { font-size: 23px; }
+  .levels button { height: 36px; }
+  .filters button { height: 32px; }
+  .card { padding: 16px 20px 18px; border-radius: 26px; }
+  .word { font-size: clamp(30px, 9.5vw, 40px); }
+  .word.long { font-size: clamp(25px, 7.5vw, 32px); }
+  .word.xlong { font-size: clamp(21px, 6.4vw, 27px); }
+  .answer { margin-top: 14px; min-height: 76px; }
+  .stack { margin-top: 14px; }
+  .translation { font-size: clamp(18px, 5.4vw, 22px); }
+  .actions { gap: 8px; }
+  .row { gap: 8px; }
+  .btn { height: 50px; font-size: 16px; }
+}
+
+@media (max-height: 620px) {
+  #practiceView { gap: 8px; }
+  .brand { font-size: 21px; }
+  .dir, .icon-btn { height: 34px; }
+  .icon-btn { width: 34px; }
+  .levels { padding: 3px; }
+  .levels-thumb { top: 3px; bottom: 3px; left: 3px; width: calc((100% - 6px) / 4); }
+  .levels button { height: 32px; font-size: 14px; }
+  .filters button { height: 30px; font-size: 13px; padding: 0 12px; }
+  .card { padding: 12px 18px 14px; border-radius: 22px; }
+  .card-meta { font-size: 13px; }
+  .word { font-size: clamp(26px, 8.5vw, 34px); }
+  .answer { margin-top: 10px; min-height: 64px; }
+  .stack { margin-top: 10px; }
+  .btn { height: 44px; border-radius: 14px; }
+  .foot { gap: 6px; }
+  .foot-row { font-size: 13px; }
 }
