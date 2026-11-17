@@ -33,11 +33,11 @@
       dir: 'de',          // 'de' = palavra em alemão, tradução em português
       filter: 'all',      // tipo de palavra a praticar
       known: { A1: [], A2: [], B1: [], B2: [] },
-      queue: [],          // palavras ainda por ver no ciclo atual
+      queue: [],          // palavras ainda por ver na ronda atual
       current: null,
       cycleLevel: null,
-      cycleFilter: null,
       revealed: false,
+      rounds: {},         // ronda guardada de cada nível: { A2: { queue, current, revealed } }
     };
   }
 
@@ -46,6 +46,7 @@
     const d = defaultState();
     const merged = { ...d, ...s, known: { ...d.known, ...(s.known || {}) } };
     if (!TYPES.includes(merged.filter)) merged.filter = 'all';
+    if (!merged.rounds || typeof merged.rounds !== 'object') merged.rounds = {};
     return merged;
   }
 
@@ -97,6 +98,7 @@
   }
 
   function save() {
+    stashRound();
     state.savedAt = Date.now();
     const copy = JSON.parse(JSON.stringify(state));
     try { localStorage.setItem(STORE_KEY, JSON.stringify(copy)); } catch (e) { /* ignorar */ }
@@ -120,17 +122,56 @@
   const inFilter = (w) => state.filter === 'all' || w.tipo === state.filter;
   const pool = () => byLevel[state.level].filter(inFilter);
 
+  // ---------- Rondas por nível ----------
+  // A ronda é do nível: cada palavra do nível aparece uma vez por ronda, seja qual for o filtro.
+  // O filtro só escolhe que palavras da ronda vais estudar agora.
+  // Mudar de nível ou de filtro nunca reinicia a ronda.
+  const valid = (id) => id && byId[id] && byId[id].nivel === state.level && !knownSet().has(id);
+
   function newCycle() {
     const k = knownSet();
-    state.queue = shuffle(pool().map((w) => w.id).filter((id) => !k.has(id)));
+    state.queue = shuffle(byLevel[state.level].map((w) => w.id).filter((id) => !k.has(id)));
     state.cycleLevel = state.level;
-    state.cycleFilter = state.filter;
+  }
+
+  // palavras da ronda que ainda faltam e que correspondem ao filtro
+  const remainingInFilter = () => state.queue.filter((id) => byId[id] && inFilter(byId[id])).length;
+
+  function stashRound() {
+    if (state.cycleLevel !== state.level) return;
+    state.rounds[state.level] = {
+      queue: state.queue.slice(),
+      current: state.current,
+      revealed: state.revealed,
+    };
+  }
+
+  function restoreRound() {
+    const r = state.rounds[state.level];
+    if (!r) { newCycle(); next(); return; }
+    state.queue = (r.queue || []).filter(valid);
+    state.cycleLevel = state.level;
+    state.current = valid(r.current) ? r.current : null;
+    state.revealed = !!r.revealed && !!state.current;
+    keepOrSwapCurrent();
+  }
+
+  // se a palavra no ecrã não é do tipo escolhido, volta para o início da ronda (ainda não foi vista)
+  function keepOrSwapCurrent() {
+    if (state.current && inFilter(byId[state.current])) {
+      save();
+      render(true);
+      return;
+    }
+    if (state.current) state.queue.unshift(state.current);
+    state.current = null;
+    next();
   }
 
   function next() {
-    const k = knownSet();
-    while (state.queue.length && (k.has(state.queue[0]) || !byId[state.queue[0]])) state.queue.shift();
-    state.current = state.queue.shift() || null;
+    state.queue = state.queue.filter(valid);
+    const i = state.queue.findIndex((id) => inFilter(byId[id]));
+    state.current = i >= 0 ? state.queue.splice(i, 1)[0] : null;
     state.revealed = false;
     save();
     render(true);
@@ -138,9 +179,9 @@
 
   function setLevel(level) {
     if (level === state.level) return;
+    stashRound();
     state.level = level;
-    newCycle();
-    next();
+    restoreRound();
   }
 
   // grava sempre que a app vai para segundo plano ou é fechada
@@ -152,8 +193,7 @@
   function setFilter(type) {
     if (type === state.filter) return;
     state.filter = type;
-    newCycle();
-    next();
+    keepOrSwapCurrent();
   }
 
   function toggleDir() {
@@ -181,12 +221,11 @@
   }
 
   function clearKnown() {
-    const cleared = state.known[state.level].filter((id) => byId[id] && inFilter(byId[id]));
+    const cleared = state.known[state.level].filter((id) => byId[id]);
     state.known[state.level] = [];
-    // as palavras limpas do tipo atual voltam ao ciclo em posições aleatórias
+    // as palavras limpas voltam à ronda do nível, em posições aleatórias
     for (const id of cleared) {
-      const pos = Math.floor(Math.random() * (state.queue.length + 1));
-      state.queue.splice(pos, 0, id);
+      state.queue.splice(Math.floor(Math.random() * (state.queue.length + 1)), 0, id);
     }
     if (!state.current) next();
     else { save(); render(false); }
@@ -264,15 +303,23 @@
       const what = TYPE_PLURAL[state.filter];
       const fem = state.filter === 'all' || state.filter === 'preposição';
       const os = fem ? 'as' : 'os';
+      const others = state.queue.filter((id) => byId[id] && !k.has(id)).length;
       if (poolKnown >= p.length) {
         el.doneTitle.textContent = 'Já sabes tudo aqui';
         el.doneText.textContent = state.filter === 'all'
           ? `Marcaste as ${p.length} palavras do ${level} como sabidas. Usa «Limpar» para as voltar a praticar.`
           : `Marcaste ${os} ${p.length} ${what} do ${level} como ${fem ? 'sabidas' : 'sabidos'}. Escolhe outro tipo ou usa «Limpar».`;
         el.restartBtn.hidden = true;
+      } else if (state.filter !== 'all' && others > 0) {
+        el.doneTitle.textContent = `Sem mais ${what}`;
+        el.doneText.textContent =
+          `Já viste ${fem ? 'todas' : 'todos'} ${os} ${what} desta ronda do ${level}. ` +
+          `Ainda ${others === 1 ? 'falta 1 palavra' : `faltam ${others} palavras`} de outros tipos. ` +
+          'Escolhe outro tipo ou recomeça a ronda do nível.';
+        el.restartBtn.hidden = false;
       } else {
         el.doneTitle.textContent = 'Ronda concluída';
-        el.doneText.textContent = `Já viste ${fem ? 'todas' : 'todos'} ${os} ${what} do ${level} que ainda não sabes.`;
+        el.doneText.textContent = `Já viste todas as palavras do ${level} que ainda não sabes.`;
         el.restartBtn.hidden = false;
       }
       return;
@@ -283,7 +330,7 @@
     el.actions.hidden = false;
 
     el.type.textContent = TYPE_LABEL[w.tipo] || w.tipo;
-    const left = state.queue.length + 1;
+    const left = remainingInFilter() + 1;
     el.remaining.textContent = left === 1 ? 'última por ver' : `faltam ${left}`;
 
     const de = formatGerman(w);
@@ -384,18 +431,18 @@
     // remove marcações de palavras que já não existem na lista
     for (const l of LEVELS) state.known[l] = (state.known[l] || []).filter((id) => byId[id]);
 
-    if (state.cycleLevel !== state.level || state.cycleFilter !== state.filter ||
-        (state.current && !byId[state.current])) {
-      newCycle();
-      next();
-    } else {
-      // limpa a ronda guardada de palavras inexistentes, de outro tipo ou já sabidas
-      const k = knownSet();
-      state.queue = state.queue.filter((id) => byId[id] && inFilter(byId[id]) && !k.has(id));
-      if (!state.current || k.has(state.current)) next();
-      else render(false);
+    // converte rondas de versões anteriores para rondas por nível
+    for (const l of LEVELS) {
+      const old = state.rounds[`${l}|all`];
+      if (!state.rounds[l] && old) state.rounds[l] = old;
     }
-    save();
+    for (const key of Object.keys(state.rounds)) if (key.includes('|')) delete state.rounds[key];
+    if (!state.rounds[state.level] && state.cycleLevel === state.level &&
+        (state.cycleFilter === 'all' || state.cycleFilter == null)) {
+      state.rounds[state.level] = { queue: state.queue, current: state.current, revealed: state.revealed };
+    }
+    delete state.cycleFilter;
+    restoreRound();
     scrollActiveFilter();
   }
 
